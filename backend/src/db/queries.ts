@@ -50,7 +50,13 @@ export const upsertUser = async (data: NewUser) => {
 
 //Product queries
 export const createProduct = async (data: NewProduct) => {
-  const [product] = await db.insert(products).values(data).returning();
+  const [product] = await db
+    .insert(products)
+    .values({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .returning();
   return product;
 };
 
