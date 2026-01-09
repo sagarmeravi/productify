@@ -9,7 +9,11 @@ import {
 } from "../lib/api";
 
 export const useProducts = () => {
-  const result = useQuery({ queryKey: ["products"], queryFn: getAllProducts });
+  const result = useQuery({
+    queryKey: ["products"],
+    queryFn: getAllProducts,
+    select: (data) => (Array.isArray(data) ? data : []),
+  });
   return result;
 };
 
@@ -37,7 +41,11 @@ export const useDeleteProduct = () => {
 };
 
 export const useMyProducts = () => {
-  return useQuery({ queryKey: ["myProducts"], queryFn: getMyProducts });
+  return useQuery({
+    queryKey: ["myProducts"],
+    queryFn: getMyProducts,
+    select: (data) => (Array.isArray(data) ? data : []),
+  });
 };
 
 export const useUpdateProduct = () => {
