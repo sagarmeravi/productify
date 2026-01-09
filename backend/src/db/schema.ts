@@ -2,12 +2,16 @@ import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
-  id: text("id").primaryKey(),
+  id: text("id").primaryKey(), // clerkId
   email: text("email").notNull().unique(),
-  name: text("name").notNull(),
+  name: text("name"),
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).notNull(),
+  // updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export const products = pgTable("products", {
@@ -19,10 +23,7 @@ export const products = pgTable("products", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { mode: "date" })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
 
 export const comments = pgTable("comments", {
@@ -34,36 +35,42 @@ export const comments = pgTable("comments", {
   productId: uuid("product_id")
     .notNull()
     .references(() => products.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
-/* -------------------- Relations -------------------- */
+// 🔴 Relations define how tables connect to each other. This enables Drizzle's query API
+// 🔴 to automatically join related data when using `with: { relationName: true }`
+
+// 🔴 Users Relations: A user can have many products and many comments
+// 🔴 `many()` means one user can have multiple related records
 
 export const usersRelations = relations(users, ({ many }) => ({
-  products: many(products), // one user → many products
-  comments: many(comments), // one user → many comments
+  products: many(products), // 🔴 One user → many products
+  comments: many(comments), // 🔴 One user → many comments
 }));
+
+// Products Relations: a product belongs to one user and can have many comments
+// `one()` means a single related record, `many()` means multiple related records
 
 export const productsRelations = relations(products, ({ one, many }) => ({
   comments: many(comments),
-  user: one(users, {
-    fields: [products.userId],
-    references: [users.id],
-  }),
+  // `fields` = the foreign key column in THIS table (products.userId)
+  // `references` = the primary key column in the RELATED table (users.id)
+  user: one(users, { fields: [products.userId], references: [users.id] }), // one product → one user
 }));
 
+// Comments Relations: A comment belongs to one user and one product
 export const commentsRelations = relations(comments, ({ one }) => ({
-  user: one(users, {
-    fields: [comments.userId],
-    references: [users.id],
-  }),
+  // `comments.userId` is the foreign key,  `users.id` is the primary key
+  user: one(users, { fields: [comments.userId], references: [users.id] }), // One comment → one user
+  // `comments.productId` is the foreign key,  `products.id` is the primary key
   product: one(products, {
     fields: [comments.productId],
     references: [products.id],
-  }),
+  }), // One comment → one product
 }));
 
-/* -------------------- Types -------------------- */
-
+// Type inference
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
